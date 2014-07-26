@@ -1,0 +1,57 @@
+Weight Lifting Exercise Dataset
+========================================================
+
+## Loading the data
+Loading the data and necessary Packages
+```{r}
+library(caret)
+train<-read.csv("train.csv",na.strings=c("NA",""))
+test_data<-read.csv("test.csv",na.strings=c("NA",""))
+```
+## Preprocess the data
+checking which columns in the data have a lot of missing values. 
+```{r}
+colums_count_of_missing_values <- colSums(is.na(train))
+```
+Taking only those columns which have no missing values
+```{r}
+train_good<-train[,(colums_count_of_missing_values==0)]
+test_good<-test_data[,(colums_count_of_missing_values==0)]
+```
+Removing other unncessary columns from dataset
+removing bad columns - "X","user_name","raw_timestamp_part_1","raw_timestamp_part_2","cvtd_timestamp","new_window"
+
+```{r}
+train_proc<-subset(train_good,select=-c(1:6))
+test_proc<-subset(test_good,select=-c(1:6))
+```
+
+Splitting Data into training and test set for building the model With a 80:20 Split
+
+```{r}
+set.seed(32423)
+inTrain<- createDataPartition(y=train_proc$classe,p=.8,list=FALSE)
+training<-train_proc[inTrain,]
+testing<-train_proc[-inTrain,]
+```
+## Training The model
+This is a classification model therefore training the model using GBM. Using repeated cross validation:
+
+```{r}
+modelFit<- train(classe~.,data=training,trControl=trainControl(method="repeatedcv",number=2,repeats=2, allowParallel=TRUE) ,method="gbm",verbose=FALSE)
+```
+
+## Predicting the data and Checking accuracy on testing set
+```{r}
+pred<-predict(modelFit,testing)
+conmat <- confusionMatrix(pred,testing$classe)
+conmat$table  
+accuracy<-postResample(pred,testing$classe)[[1]]
+out_of_sample_error<-(1-accuracy)*100
+```
+the accuracy comes out to be: 98.9% and the out of sample error is 1.04%
+## Predicting on given data set
+```{r}
+predict_final<-predict(modelFit,test_proc)
+predict_final
+```
